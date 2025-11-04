@@ -34,7 +34,8 @@ jobs:
       - name: Create pipeline submission zip
         run: |
           # Use git archive to create clean zip (respects .gitignore)
-          git archive --format=zip --output="${{ steps.version.outputs.zip_name }}" HEAD
+          # TAK pipeline requires root folder in zip
+          git archive --format=zip --prefix=omni-HUD/ --output="${{ steps.version.outputs.zip_name }}" HEAD
 
           # Verify the zip was created
           if [ ! -f "${{ steps.version.outputs.zip_name }}" ]; then
