@@ -1,0 +1,15 @@
+
+package com.engindearing.omnihud;
+
+import com.atak.plugins.impl.AbstractPlugin;
+import com.atak.plugins.impl.PluginContextProvider;
+import gov.tak.api.plugin.IServiceController;
+
+public class OmniHUDPlugin extends AbstractPlugin {
+
+    public OmniHUDPlugin(IServiceController serviceController) {
+        super(serviceController,
+              new OmniHUDTool(serviceController.getService(PluginContextProvider.class).getPluginContext()),
+              new OmniHUDMapComponent());
+    }
+}

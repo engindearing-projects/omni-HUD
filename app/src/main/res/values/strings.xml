@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">OmniHUD</string>
+    <!-- description -->
+    <string name="app_desc">OmniHUD plugin for ATAK - USB-C HUD device integration for ECOTI and compatible displays</string>
+
+    <!-- HUD Connection -->
+    <string-array name="hud_devices">
+        <item>ECOTI</item>
+        <item>Generic HUD</item>
+    </string-array>
+
+    <!-- Data Stream Options -->
+    <string-array name="stream_types">
+        <item>Position Only</item>
+        <item>Position + Waypoints</item>
+        <item>Position + Contacts</item>
+        <item>All Data</item>
+    </string-array>
+
+    <!-- Update rates -->
+    <string-array name="update_rates">
+        <item>1 Hz (Low Power)</item>
+        <item>5 Hz (Normal)</item>
+        <item>10 Hz (High Performance)</item>
+    </string-array>
+
+</resources>
