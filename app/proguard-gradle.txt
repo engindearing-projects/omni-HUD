@@ -95,8 +95,8 @@
 ######################################################################
 
 # Keep plugin entry point class - required for ATAK to load the plugin
--keep class com.engindearing.omnicot.OmniCOTPlugin { *; }
--keep class com.engindearing.omnicot.OmniCOTMapComponent { *; }
--keep class com.engindearing.omnicot.OmniCOTTool { *; }
--keep class com.engindearing.omnicot.OmniCOTDropDownReceiver { *; }
+-keep class com.engindearing.omnihud.OmniHUDPlugin { *; }
+-keep class com.engindearing.omnihud.OmniHUDMapComponent { *; }
+-keep class com.engindearing.omnihud.OmniHUDTool { *; }
+-keep class com.engindearing.omnihud.OmniHUDDropDownReceiver { *; }
 

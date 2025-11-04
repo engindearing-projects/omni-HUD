@@ -1,91 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-// PLUGIN_VERSION is the common version name when describing the plugin.
-// ATAK_VERSION   is for the version of ATAK this plugin should be compatible
-//                with some examples include 3.11.0, 3.11.0.civ 3.11.1.fvey
-//
-////////////////////////////////////////////////////////////////////////////////
-
-buildscript {
-
-    ext.PLUGIN_VERSION = "0.1"
-    ext.ATAK_VERSION = "5.4.0"
-
-    def takdevVersion = '2.+'
-
-    def getValueFromPropertiesFile = { propFile, key ->
-        if(!propFile.isFile() || !propFile.canRead())
-            return null
-        def prop = new Properties()
-        def reader = propFile.newReader()
-        try {
-            prop.load(reader)
-        } finally {
-            reader.close()
-        }
-        return prop.get(key)
-    }
-
-    def getProperty = { name, defValue ->
-        def prop = project.properties[name] ?:
-                getValueFromPropertiesFile(project.rootProject.file('local.properties'), name)
-        return (null == prop) ? defValue : prop
-    }
-
-    def urlKey = 'takrepo.url'
-
-    ext.isDevKitEnabled = { ->
-        return getProperty(urlKey, null) != null
-    }
-
-    ext.takrepoUrl = getProperty(urlKey, 'https://localhost/')
-    ext.takrepoUser = getProperty('takrepo.user', 'invalid')
-    ext.takrepoPassword = getProperty('takrepo.password', 'invalid')
-    ext.takdevPlugin = getProperty('takdev.plugin', "${rootDir}/../../atak-gradle-takdev.jar")
-
-    // Keystore configuration - should be defined in local.properties
-    ext.keystoreFile = getProperty('keystore.file', "${buildDir}/android_keystore")
-    ext.keystorePassword = getProperty('keystore.password', 'android')
-    ext.keyAlias = getProperty('key.alias', 'androiddebugkey')
-    ext.keyPassword = getProperty('key.password', 'android')
-
-    repositories {
-        google()
-        mavenCentral()
-        mavenLocal()
-        maven {
-            url "https://jitpack.io"
-        }
-        maven {
-            url = takrepoUrl
-            credentials {
-                username = takrepoUser
-                password = takrepoPassword
-            }
-        }
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.8.2'
-        if(isDevKitEnabled()) {
-            classpath "com.atakmap.gradle:atak-gradle-takdev:${takdevVersion}"
-        } else {
-            classpath files(takdevPlugin)
-        }
-    }
-}
-
-allprojects {
-    repositories {
-        mavenCentral()
-        google()
-        mavenCentral()
-        mavenLocal()
-        maven {
-            url "https://jitpack.io"
-        }
-    }
-}
-
 apply plugin: 'com.android.application'
 apply plugin: 'atak-takdev-plugin'
 // Typst documentation build disabled for TAK pipeline submission
@@ -113,7 +25,7 @@ def supportedFlavors =
 
 android {
     compileSdk 35
-    namespace 'com.engindearing.omnicot'
+    namespace 'com.engindearing.omnihud'
 
     buildFeatures {
         buildConfig = true
@@ -260,7 +172,9 @@ android {
 }
 
 afterEvaluate {
-    project.file('proguard-gradle-repackage.txt').text = "-repackageclasses atakplugin.${rootProject.getName()}"
+    // Use sanitized name for proguard (no hyphens allowed in package names)
+    def sanitizedName = rootProject.getName().replaceAll('-', '')
+    project.file('proguard-gradle-repackage.txt').text = "-repackageclasses atakplugin.${sanitizedName}"
 
     try { 
         tasks.named("compile" + getCommandFlavor() + "ReleaseKotlin") {

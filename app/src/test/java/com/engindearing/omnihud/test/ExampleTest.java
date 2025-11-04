@@ -1,5 +1,5 @@
 
-package com.engindearing.omnicot.test;
+package com.engindearing.omnihud.test;
 
 import static org.junit.Assert.*;
 
