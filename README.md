@@ -67,64 +67,9 @@ Configure what data streams to your HUD:
 - **Routes**: Planned paths
 - **Markers**: Map markers and POIs
 
-## Development
-
-### Building from Source
-
-```bash
-git clone https://github.com/engindearing-projects/omni-HUD.git
-cd omni-HUD
-./gradlew assembleCivDebug
-```
-
-### Adding New HUD Devices
-
-OmniHUD is designed to be extensible. To add support for a new HUD:
-
-1. Implement `HUDDevice` interface
-2. Add USB VID/PID to device registry
-3. Implement data formatting for your protocol
-4. Submit pull request
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## CoT Message Format
-
-OmniHUD sends data using standard Cursor-on-Target XML format:
-
-```xml
-<?xml version='1.0'?>
-<event version='2.0' uid='...' type='a-u-G' time='...' stale='...' how='h-g-i-g-o'>
-<point lat='39.2' lon='-77.0' hae='121' ce='9999999.0' le='9999999.0' />
-<detail>
-<contact callsign='CALLSIGN'/>
-<status readiness='true'/>
-<!-- Additional tactical data -->
-</detail>
-</event>
-```
-
-## Architecture
-
-- **USB Communication Layer**: Android USB Host API
-- **CoT Parser**: Standard TAK CoT message handling
-- **Device Abstraction**: Pluggable device drivers
-- **Data Filter**: Configurable data selection
-- **Format Converter**: Device-specific output formatting
-
 ## Contributing
 
-We welcome contributions! This project is open-source to enable broad HUD compatibility across manufacturers.
-
-### Areas for Contribution
-
-- Additional HUD device support
-- Protocol optimizations
-- Data visualization improvements
-- Documentation
-- Testing with different hardware
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
@@ -132,7 +77,7 @@ MIT License - See [LICENSE](LICENSE) for details
 
 ## Credits
 
-- **Hardware**: ECOTI USB-C adapter by j@engindearing.soy
+- **Hardware**: ECOTI USB-C adapter
 - **ATAK SDK**: TAK Product Center
 - **Community**: Thanks to r/NightVision for testing and feedback
 
