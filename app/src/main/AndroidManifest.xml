@@ -2,6 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="GoogleAppIndexingWarning">
 
+    <!-- USB Host support for HUD devices -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- USB permissions -->
+    <uses-permission android:name="android.permission.USB_PERMISSION" />
+
     <application 
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"

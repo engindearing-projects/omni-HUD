@@ -24,7 +24,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="OmniCOT Dashboard"
+                android:text="OmniHUD Dashboard"
                 android:textSize="24sp"
                 android:textStyle="bold"
                 android:textColor="@color/heading_yellow" />
@@ -48,7 +48,7 @@
 
         </LinearLayout>
 
-        <!-- Status Card -->
+        <!-- HUD Connection Status Card -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -60,7 +60,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Status"
+                android:text="HUD Connection"
                 android:textSize="14sp"
                 android:textColor="@color/heading_yellow"
                 android:textStyle="bold"
@@ -69,261 +69,153 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <LinearLayout
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Status:"
+                    android:textSize="12sp"
+                    android:textColor="#AAAAAA"
+                    android:paddingEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/txtConnectionStatus"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingEnd="8dp">
+                    android:text="Not Connected"
+                    android:textSize="16sp"
+                    android:textColor="#FF6B6B"
+                    android:textStyle="bold" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Active AOIs"
-                        android:textSize="11sp"
-                        android:textColor="#AAAAAA" />
+            </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/txtActiveAOIs"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="20sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold" />
+            <TextView
+                android:id="@+id/txtDeviceInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No device connected"
+                android:textSize="11sp"
+                android:textColor="#888888"
+                android:paddingTop="4dp" />
 
-                </LinearLayout>
+        </LinearLayout>
 
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:background="#333333" />
+        <!-- HUD Device Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/new_dark_button_bg"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp">
 
-                <LinearLayout
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Device Selection"
+                android:textSize="14sp"
+                android:textColor="@color/heading_yellow"
+                android:textStyle="bold"
+                android:paddingBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/spinnerHUDDevices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:drawable/btn_dropdown"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <Button
+                    android:id="@+id/btnConnect"
+                    style="@style/darkButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp">
+                    android:text="Connect"
+                    android:layout_marginEnd="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Active Alerts"
-                        android:textSize="11sp"
-                        android:textColor="#AAAAAA" />
-
-                    <TextView
-                        android:id="@+id/txtActiveAlerts"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="20sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="match_parent"
-                    android:background="#333333" />
-
-                <LinearLayout
+                <Button
+                    android:id="@+id/btnDisconnect"
+                    style="@style/darkButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingStart="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="COT Modified"
-                        android:textSize="11sp"
-                        android:textColor="#AAAAAA" />
-
-                    <TextView
-                        android:id="@+id/txtCOTModified"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textSize="20sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
+                    android:text="Disconnect"
+                    android:enabled="false" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Quick Actions Header -->
+        <!-- Data Streaming Configuration -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Quick Actions"
+            android:text="Data Streaming"
             android:textSize="18sp"
             android:textColor="@color/white"
             android:textStyle="bold"
             android:paddingBottom="8dp" />
 
-        <!-- Quick Action Cards Grid -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2"
-            android:paddingBottom="12dp">
+            android:orientation="vertical"
+            android:background="@drawable/new_dark_button_bg"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp">
 
-            <!-- COT Management Card -->
-            <LinearLayout
-                android:id="@+id/cardCOTManagement"
-                android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/new_dark_button_bg"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Stream Type"
+                android:textSize="12sp"
+                android:textColor="@color/heading_yellow"
+                android:paddingBottom="4dp" />
+
+            <Spinner
+                android:id="@+id/spinnerStreamType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:drawable/btn_dropdown"
                 android:padding="12dp"
-                android:layout_marginEnd="6dp"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true">
+                android:entries="@array/stream_types"
+                android:layout_marginBottom="12dp" />
 
-                <ImageButton
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_edit"
-                    android:tint="@color/heading_yellow"
-                    android:clickable="false"
-                    android:contentDescription="COT Management" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Update Rate"
+                android:textSize="12sp"
+                android:textColor="@color/heading_yellow"
+                android:paddingBottom="4dp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="COT\nManagement"
-                    android:textSize="13sp"
-                    android:textColor="@color/white"
-                    android:textAlignment="center"
-                    android:paddingTop="8dp" />
-
-            </LinearLayout>
-
-            <!-- AOI Management Card -->
-            <LinearLayout
-                android:id="@+id/cardAOIManagement"
-                android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/new_dark_button_bg"
+            <Spinner
+                android:id="@+id/spinnerUpdateRate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:drawable/btn_dropdown"
                 android:padding="12dp"
-                android:layout_marginStart="6dp"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true">
+                android:entries="@array/update_rates"
+                android:layout_marginBottom="12dp" />
 
-                <ImageButton
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_mapmode"
-                    android:tint="@color/heading_yellow"
-                    android:clickable="false"
-                    android:contentDescription="AOI Management" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="AOI\nManagement"
-                    android:textSize="13sp"
-                    android:textColor="@color/white"
-                    android:textAlignment="center"
-                    android:paddingTop="8dp" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Second Row of Quick Actions -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2"
-            android:paddingBottom="16dp">
-
-            <!-- Create Alert Card -->
-            <LinearLayout
-                android:id="@+id/cardCreateAlert"
-                android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/new_dark_button_bg"
-                android:padding="12dp"
-                android:layout_marginEnd="6dp"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true">
-
-                <ImageButton
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_dialog_alert"
-                    android:tint="@color/heading_yellow"
-                    android:clickable="false"
-                    android:contentDescription="Create Alert" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Create\nAlert"
-                    android:textSize="13sp"
-                    android:textColor="@color/white"
-                    android:textAlignment="center"
-                    android:paddingTop="8dp" />
-
-            </LinearLayout>
-
-            <!-- View History Card -->
-            <LinearLayout
-                android:id="@+id/cardViewHistory"
-                android:layout_width="0dp"
-                android:layout_height="120dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/new_dark_button_bg"
-                android:padding="12dp"
-                android:layout_marginStart="6dp"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true">
-
-                <ImageButton
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_recent_history"
-                    android:tint="@color/heading_yellow"
-                    android:clickable="false"
-                    android:contentDescription="View History" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="View\nHistory"
-                    android:textSize="13sp"
-                    android:textColor="@color/white"
-                    android:textAlignment="center"
-                    android:paddingTop="8dp" />
-
-            </LinearLayout>
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchEnableStreaming"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable Data Streaming"
+                android:textColor="@color/white"
+                android:enabled="false" />
 
         </LinearLayout>
 
@@ -334,30 +226,42 @@
             android:background="@color/white"
             android:layout_marginBottom="16dp" />
 
-        <!-- Recent Activity Section -->
+        <!-- HUD Preview Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Recent Activity"
+            android:text="Device Status"
             android:textSize="18sp"
             android:textColor="@color/white"
             android:textStyle="bold"
             android:paddingBottom="8dp" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recentActivityRecyclerView"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="150dp"
+            android:orientation="vertical"
             android:background="@drawable/new_dark_button_bg"
-            android:padding="8dp" />
+            android:padding="12dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/txtHUDPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="100dp"
+                android:text="No data being streamed to HUD"
+                android:textSize="12sp"
+                android:textColor="#888888"
+                android:fontFamily="monospace"
+                android:padding="8dp" />
+
+        </LinearLayout>
 
         <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/white"
-            android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp" />
 
         <!-- Advanced Section -->
@@ -371,34 +275,27 @@
             android:paddingBottom="8dp" />
 
         <Button
-            android:id="@+id/btnExportData"
+            android:id="@+id/btnRefreshDevices"
             style="@style/darkButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Export Data"
+            android:text="Refresh USB Devices"
             android:layout_marginBottom="8dp" />
 
         <Button
-            android:id="@+id/btnImportData"
+            android:id="@+id/btnTestConnection"
             style="@style/darkButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Import Data"
-            android:layout_marginBottom="8dp" />
-
-        <Button
-            android:id="@+id/btnClearAll"
-            style="@style/darkButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Clear All Data"
-            android:layout_marginBottom="8dp" />
+            android:text="Send Test Data"
+            android:layout_marginBottom="8dp"
+            android:enabled="false" />
 
         <!-- Footer -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="OmniCOT v0.1 - Advanced Tactical Coordination"
+            android:text="OmniHUD v0.1 - USB-C HUD Integration for ATAK"
             android:textSize="10sp"
             android:textColor="#666666"
             android:textAlignment="center"
