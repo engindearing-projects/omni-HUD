@@ -19,6 +19,9 @@ import androidx.appcompat.widget.SwitchCompat;
 
 import com.atakmap.android.dropdown.DropDown;
 import com.atakmap.android.dropdown.DropDownReceiver;
+import com.atakmap.android.maps.MapEvent;
+import com.atakmap.android.maps.MapEventDispatcher;
+import com.atakmap.android.maps.MapItem;
 import com.atakmap.android.maps.MapView;
 import com.atakmap.android.maps.PointMapItem;
 import com.atakmap.coremap.log.Log;
@@ -41,6 +44,11 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     private Handler streamingHandler;
     private Runnable streamingRunnable;
     private boolean isStreaming = false;
+
+    // Map Event Handling (best practices)
+    private MapEventDispatcher eventDispatcher;
+    private MapEventDispatcher.MapEventDispatchListener selfPositionListener;
+    private MapEventDispatcher.MapEventDispatchListener itemTrackingListener;
 
     // UI Components
     private TextView txtConnectionStatus;
@@ -66,6 +74,10 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         this.pluginContext = context;
         this.mapView = mapView;
         this.dashboardView = dashboardView;
+
+        // Initialize MapEventDispatcher (ATAK best practices)
+        eventDispatcher = mapView.getMapEventDispatcher();
+        setupMapEventListeners();
 
         // Initialize USB communication manager
         usbManager = new USBCommunicationManager(pluginContext);
@@ -171,6 +183,68 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         });
     }
 
+    /**
+     * Setup MapEventDispatcher listeners following ATAK best practices
+     * Instead of polling, we use event-driven updates for efficiency
+     */
+    private void setupMapEventListeners() {
+        // Listener for self position updates (efficient replacement for polling)
+        // Subscribe to MAP_MOVED event to detect when self position changes
+        selfPositionListener = new MapEventDispatcher.MapEventDispatchListener() {
+            @Override
+            public void onMapEvent(MapEvent event) {
+                if (isStreaming && usbManager.isConnected()) {
+                    // Only send updates when streaming is active
+                    sendCurrentPositionToHUD();
+                }
+            }
+        };
+
+        // Listener for tracking COT items (ITEM_ADDED, ITEM_REMOVED, ITEM_REFRESH)
+        // This allows the HUD to display nearby units in real-time
+        itemTrackingListener = new MapEventDispatcher.MapEventDispatchListener() {
+            @Override
+            public void onMapEvent(MapEvent event) {
+                MapItem item = event.getItem();
+                String eventType = event.getType();
+
+                if (item instanceof PointMapItem) {
+                    PointMapItem pointItem = (PointMapItem) item;
+                    String callsign = pointItem.getTitle();
+                    String uid = pointItem.getUID();
+
+                    switch (eventType) {
+                        case MapEvent.ITEM_ADDED:
+                            Log.d(TAG, "COT Item added: " + callsign + " (UID: " + uid + ")");
+                            // Could send to HUD for nearby unit tracking
+                            break;
+
+                        case MapEvent.ITEM_REMOVED:
+                            Log.d(TAG, "COT Item removed: " + callsign + " (UID: " + uid + ")");
+                            // Could remove from HUD display
+                            break;
+
+                        case MapEvent.ITEM_REFRESH:
+                            // Item properties changed (position, affiliation, etc.)
+                            Log.d(TAG, "COT Item refreshed: " + callsign);
+                            // Could update HUD display
+                            break;
+                    }
+                }
+            }
+        };
+
+        // Register listeners following best practices:
+        // - MAP_MOVED for self position updates (event-driven instead of polling)
+        // - ITEM_ADDED, ITEM_REMOVED, ITEM_REFRESH for COT item tracking
+        eventDispatcher.addMapEventListener(MapEvent.MAP_MOVED, selfPositionListener);
+        eventDispatcher.addMapEventListener(MapEvent.ITEM_ADDED, itemTrackingListener);
+        eventDispatcher.addMapEventListener(MapEvent.ITEM_REMOVED, itemTrackingListener);
+        eventDispatcher.addMapEventListener(MapEvent.ITEM_REFRESH, itemTrackingListener);
+
+        Log.d(TAG, "MapEventDispatcher listeners registered (best practices)");
+    }
+
     private void refreshDeviceList() {
         availableDevices = usbManager.getAvailableDevices();
 
@@ -235,6 +309,11 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         }
     }
 
+    /**
+     * Start streaming position data to HUD using event-driven updates (best practices)
+     * Primary updates come from MAP_MOVED events (event-driven)
+     * Fallback polling at low rate ensures updates even when map is stationary
+     */
     private void startStreaming() {
         if (!usbManager.isConnected()) {
             Toast.makeText(pluginContext, "Not connected to HUD device", Toast.LENGTH_SHORT).show();
@@ -244,29 +323,26 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
         isStreaming = true;
 
-        // Get update rate from spinner
-        int updateRatePosition = spinnerUpdateRate.getSelectedItemPosition();
-        long updateIntervalMs;
-        switch (updateRatePosition) {
-            case 0: updateIntervalMs = 1000; break;  // 1 Hz
-            case 1: updateIntervalMs = 200; break;   // 5 Hz
-            case 2: updateIntervalMs = 100; break;   // 10 Hz
-            default: updateIntervalMs = 200; break;  // Default 5 Hz
-        }
+        // Event-driven updates via MAP_MOVED are primary (already registered in setupMapEventListeners)
+        // Add fallback polling at low rate for GPS updates when map is stationary
+        long fallbackIntervalMs = 1000; // 1 Hz fallback (much lower than old polling rate)
 
         streamingRunnable = new Runnable() {
             @Override
             public void run() {
                 if (isStreaming && usbManager.isConnected()) {
+                    // Fallback update (most updates come from MAP_MOVED events)
                     sendCurrentPositionToHUD();
-                    streamingHandler.postDelayed(this, updateIntervalMs);
+                    streamingHandler.postDelayed(this, fallbackIntervalMs);
                 }
             }
         };
 
+        // Start fallback polling
         streamingHandler.post(streamingRunnable);
-        Toast.makeText(pluginContext, "Started streaming data to HUD", Toast.LENGTH_SHORT).show();
-        Log.d(TAG, "Started streaming at " + (1000.0 / updateIntervalMs) + " Hz");
+
+        Toast.makeText(pluginContext, "Started streaming data to HUD (event-driven)", Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "Started event-driven streaming with 1Hz fallback (ATAK best practices)");
     }
 
     private void stopStreaming() {
@@ -389,10 +465,29 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
     @Override
     protected void disposeImpl() {
+        // Stop streaming first
         stopStreaming();
+
+        // Unregister MapEventDispatcher listeners (ATAK best practices)
+        // Always clean up event listeners to prevent memory leaks
+        if (eventDispatcher != null) {
+            if (selfPositionListener != null) {
+                eventDispatcher.removeMapEventListener(MapEvent.MAP_MOVED, selfPositionListener);
+                Log.d(TAG, "Unregistered MAP_MOVED listener");
+            }
+            if (itemTrackingListener != null) {
+                eventDispatcher.removeMapEventListener(MapEvent.ITEM_ADDED, itemTrackingListener);
+                eventDispatcher.removeMapEventListener(MapEvent.ITEM_REMOVED, itemTrackingListener);
+                eventDispatcher.removeMapEventListener(MapEvent.ITEM_REFRESH, itemTrackingListener);
+                Log.d(TAG, "Unregistered item tracking listeners");
+            }
+        }
+
+        // Dispose USB manager
         if (usbManager != null) {
             usbManager.dispose();
         }
-        Log.d(TAG, "OmniHUDDropDownReceiver disposed");
+
+        Log.d(TAG, "OmniHUDDropDownReceiver disposed (all listeners cleaned up)");
     }
 }

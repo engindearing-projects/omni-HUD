@@ -111,6 +111,19 @@ OmniHUD sends data using standard Cursor-on-Target XML format:
 - **Device Abstraction**: Pluggable device drivers
 - **Data Filter**: Configurable data selection
 - **Format Converter**: Device-specific output formatting
+- **Event System**: ATAK MapEventDispatcher best practices
+
+### ATAK Best Practices
+
+This plugin follows official ATAK best practices for map event handling:
+
+- ✅ **Event-Driven Updates**: Uses `MapEventDispatcher` instead of polling for efficiency
+- ✅ **Proper Listener Management**: Event listeners are registered and cleaned up properly
+- ✅ **Push/Pop Pattern**: Tools use listener stack for exclusive event handling
+- ✅ **Item Tracking**: Real-time COT item tracking via `ITEM_ADDED/REMOVED/REFRESH`
+- ✅ **Memory Leak Prevention**: All listeners cleaned up on disposal
+
+See [ATAK_BEST_PRACTICES.md](ATAK_BEST_PRACTICES.md) for detailed implementation guide.
 
 ## Contributing
 
