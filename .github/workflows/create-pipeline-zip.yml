@@ -28,7 +28,7 @@ jobs:
           echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
 
           # Create zip name
-          ZIP_NAME="omni-COT-pipeline-${TIMESTAMP}-${SHORT_SHA}.zip"
+          ZIP_NAME="omni-HUD-pipeline-${TIMESTAMP}-${SHORT_SHA}.zip"
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Create pipeline submission zip
