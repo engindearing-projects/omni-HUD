@@ -215,6 +215,8 @@
                 android:layout_height="wrap_content"
                 android:text="Enable Data Streaming"
                 android:textColor="@color/white"
+                android:textOn="ON"
+                android:textOff="OFF"
                 android:enabled="false" />
 
         </LinearLayout>

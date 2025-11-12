@@ -71,7 +71,8 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
     public OmniHUDDropDownReceiver(final MapView mapView, final Context context, View dashboardView) {
         super(mapView);
-        this.pluginContext = context;
+        // Use provided context, fallback to MapView's context if null
+        this.pluginContext = (context != null) ? context : mapView.getContext();
         this.mapView = mapView;
         this.dashboardView = dashboardView;
 
@@ -153,7 +154,9 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         availableDevices = new ArrayList<>();
         deviceAdapter = new ArrayAdapter<>(pluginContext, android.R.layout.simple_spinner_item, new ArrayList<String>());
         deviceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerHUDDevices.setAdapter(deviceAdapter);
+        if (spinnerHUDDevices != null) {
+            spinnerHUDDevices.setAdapter(deviceAdapter);
+        }
 
         setupListeners();
 
@@ -161,26 +164,44 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     }
 
     private void setupListeners() {
-        btnConnect.setOnClickListener(v -> connectToSelectedDevice());
-        btnDisconnect.setOnClickListener(v -> disconnectDevice());
-        btnRefreshDevices.setOnClickListener(v -> refreshDeviceList());
-        btnTestConnection.setOnClickListener(v -> sendTestData());
+        // Add null checks for all UI elements before setting listeners
+        if (btnConnect != null) {
+            btnConnect.setOnClickListener(v -> connectToSelectedDevice());
+        }
 
-        switchEnableStreaming.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                startStreaming();
-            } else {
-                stopStreaming();
-            }
-        });
+        if (btnDisconnect != null) {
+            btnDisconnect.setOnClickListener(v -> disconnectDevice());
+        }
 
-        btnSettings.setOnClickListener(v -> {
-            Toast.makeText(pluginContext, "Settings coming soon", Toast.LENGTH_SHORT).show();
-        });
+        if (btnRefreshDevices != null) {
+            btnRefreshDevices.setOnClickListener(v -> refreshDeviceList());
+        }
 
-        btnHelp.setOnClickListener(v -> {
-            showHelpDialog();
-        });
+        if (btnTestConnection != null) {
+            btnTestConnection.setOnClickListener(v -> sendTestData());
+        }
+
+        if (switchEnableStreaming != null) {
+            switchEnableStreaming.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    startStreaming();
+                } else {
+                    stopStreaming();
+                }
+            });
+        }
+
+        if (btnSettings != null) {
+            btnSettings.setOnClickListener(v -> {
+                Toast.makeText(pluginContext, "Settings coming soon", Toast.LENGTH_SHORT).show();
+            });
+        }
+
+        if (btnHelp != null) {
+            btnHelp.setOnClickListener(v -> {
+                showHelpDialog();
+            });
+        }
     }
 
     /**
@@ -246,12 +267,19 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     }
 
     private void refreshDeviceList() {
+        if (usbManager == null || deviceAdapter == null) {
+            Log.e(TAG, "Cannot refresh device list - usbManager or deviceAdapter is null");
+            return;
+        }
+
         availableDevices = usbManager.getAvailableDevices();
 
         deviceAdapter.clear();
         if (availableDevices.isEmpty()) {
             deviceAdapter.add("No USB devices found");
-            btnConnect.setEnabled(false);
+            if (btnConnect != null) {
+                btnConnect.setEnabled(false);
+            }
         } else {
             for (UsbDevice device : availableDevices) {
                 String deviceName = device.getProductName() != null ? device.getProductName() :
@@ -260,7 +288,9 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
                                                                 device.getProductId());
                 deviceAdapter.add(deviceName);
             }
-            btnConnect.setEnabled(true);
+            if (btnConnect != null) {
+                btnConnect.setEnabled(true);
+            }
         }
         deviceAdapter.notifyDataSetChanged();
 
@@ -268,6 +298,11 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     }
 
     private void connectToSelectedDevice() {
+        if (spinnerHUDDevices == null || usbManager == null || availableDevices == null) {
+            Log.e(TAG, "Cannot connect - UI or manager not initialized");
+            return;
+        }
+
         int selectedPosition = spinnerHUDDevices.getSelectedItemPosition();
 
         if (selectedPosition < 0 || selectedPosition >= availableDevices.size()) {
@@ -282,30 +317,42 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     }
 
     private void disconnectDevice() {
-        usbManager.disconnect();
+        if (usbManager != null) {
+            usbManager.disconnect();
+        }
         stopStreaming();
     }
 
     private void updateConnectionStatus(boolean connected, HUDDevice device) {
         if (connected && device != null) {
-            txtConnectionStatus.setText("Connected");
-            txtConnectionStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
-            txtDeviceInfo.setText(device.getStatusString());
+            if (txtConnectionStatus != null) {
+                txtConnectionStatus.setText("Connected");
+                txtConnectionStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
+            }
+            if (txtDeviceInfo != null) {
+                txtDeviceInfo.setText(device.getStatusString());
+            }
 
-            btnConnect.setEnabled(false);
-            btnDisconnect.setEnabled(true);
-            switchEnableStreaming.setEnabled(true);
-            btnTestConnection.setEnabled(true);
+            if (btnConnect != null) btnConnect.setEnabled(false);
+            if (btnDisconnect != null) btnDisconnect.setEnabled(true);
+            if (switchEnableStreaming != null) switchEnableStreaming.setEnabled(true);
+            if (btnTestConnection != null) btnTestConnection.setEnabled(true);
         } else {
-            txtConnectionStatus.setText("Not Connected");
-            txtConnectionStatus.setTextColor(Color.parseColor("#FF6B6B")); // Red
-            txtDeviceInfo.setText("No device connected");
+            if (txtConnectionStatus != null) {
+                txtConnectionStatus.setText("Not Connected");
+                txtConnectionStatus.setTextColor(Color.parseColor("#FF6B6B")); // Red
+            }
+            if (txtDeviceInfo != null) {
+                txtDeviceInfo.setText("No device connected");
+            }
 
-            btnConnect.setEnabled(!availableDevices.isEmpty());
-            btnDisconnect.setEnabled(false);
-            switchEnableStreaming.setEnabled(false);
-            switchEnableStreaming.setChecked(false);
-            btnTestConnection.setEnabled(false);
+            if (btnConnect != null) btnConnect.setEnabled(availableDevices != null && !availableDevices.isEmpty());
+            if (btnDisconnect != null) btnDisconnect.setEnabled(false);
+            if (switchEnableStreaming != null) {
+                switchEnableStreaming.setEnabled(false);
+                switchEnableStreaming.setChecked(false);
+            }
+            if (btnTestConnection != null) btnTestConnection.setEnabled(false);
         }
     }
 
@@ -315,9 +362,11 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
      * Fallback polling at low rate ensures updates even when map is stationary
      */
     private void startStreaming() {
-        if (!usbManager.isConnected()) {
+        if (usbManager == null || !usbManager.isConnected()) {
             Toast.makeText(pluginContext, "Not connected to HUD device", Toast.LENGTH_SHORT).show();
-            switchEnableStreaming.setChecked(false);
+            if (switchEnableStreaming != null) {
+                switchEnableStreaming.setChecked(false);
+            }
             return;
         }
 
@@ -347,19 +396,28 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
     private void stopStreaming() {
         isStreaming = false;
-        if (streamingRunnable != null) {
+        if (streamingRunnable != null && streamingHandler != null) {
             streamingHandler.removeCallbacks(streamingRunnable);
         }
-        txtHUDPreview.setText("Streaming stopped");
+        if (txtHUDPreview != null) {
+            txtHUDPreview.setText("Streaming stopped");
+        }
         Log.d(TAG, "Stopped streaming");
     }
 
     private void sendCurrentPositionToHUD() {
+        if (usbManager == null || mapView == null) {
+            Log.e(TAG, "Cannot send position - usbManager or mapView is null");
+            return;
+        }
+
         try {
             // Get self marker from ATAK
             PointMapItem selfMarker = mapView.getSelfMarker();
             if (selfMarker == null) {
-                txtHUDPreview.setText("ERROR: Cannot get self position");
+                if (txtHUDPreview != null) {
+                    txtHUDPreview.setText("ERROR: Cannot get self position");
+                }
                 return;
             }
 
@@ -386,31 +444,39 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
                     "Hdg: %.1f°",
                     callsign, lat, lon, alt, heading
                 );
-                txtHUDPreview.setText(previewText);
+                if (txtHUDPreview != null) {
+                    txtHUDPreview.setText(previewText);
+                }
             } else {
-                txtHUDPreview.setText("ERROR: Failed to send data");
+                if (txtHUDPreview != null) {
+                    txtHUDPreview.setText("ERROR: Failed to send data");
+                }
                 Log.e(TAG, "Failed to send position to HUD");
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Error sending position to HUD", e);
-            txtHUDPreview.setText("ERROR: " + e.getMessage());
+            if (txtHUDPreview != null) {
+                txtHUDPreview.setText("ERROR: " + e.getMessage());
+            }
         }
     }
 
     private void sendTestData() {
-        if (!usbManager.isConnected()) {
+        if (usbManager == null || !usbManager.isConnected()) {
             Toast.makeText(pluginContext, "Not connected to HUD device", Toast.LENGTH_SHORT).show();
             return;
         }
 
         // Send test position data
-        String callsign = mapView.getDeviceCallsign();
+        String callsign = mapView != null ? mapView.getDeviceCallsign() : "TEST";
         boolean success = usbManager.sendPosition(39.2, -77.0, 121.0, 270.0, callsign);
 
         if (success) {
             Toast.makeText(pluginContext, "Test data sent successfully", Toast.LENGTH_SHORT).show();
-            txtHUDPreview.setText("TEST DATA SENT:\nLat: 39.2°\nLon: -77.0°\nAlt: 121.0 m\nHdg: 270.0°");
+            if (txtHUDPreview != null) {
+                txtHUDPreview.setText("TEST DATA SENT:\nLat: 39.2°\nLon: -77.0°\nAlt: 121.0 m\nHdg: 270.0°");
+            }
         } else {
             Toast.makeText(pluginContext, "Failed to send test data", Toast.LENGTH_SHORT).show();
         }

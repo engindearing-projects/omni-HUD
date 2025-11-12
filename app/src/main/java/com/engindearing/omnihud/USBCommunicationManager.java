@@ -81,7 +81,15 @@ public class USBCommunicationManager {
     }
 
     public USBCommunicationManager(Context context) {
+        if (context == null) {
+            Log.e(TAG, "Context is null in USBCommunicationManager constructor!");
+            throw new IllegalArgumentException("Context cannot be null");
+        }
         this.context = context.getApplicationContext();
+        if (this.context == null) {
+            // Fallback to provided context if getApplicationContext() returns null
+            this.context = context;
+        }
         this.usbManager = (UsbManager) this.context.getSystemService(Context.USB_SERVICE);
         this.supportedDevices = new ArrayList<>();
 
