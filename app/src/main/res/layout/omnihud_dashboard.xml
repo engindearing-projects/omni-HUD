@@ -127,7 +127,8 @@
                 android:layout_height="wrap_content"
                 android:background="@android:drawable/btn_dropdown"
                 android:padding="12dp"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:spinnerMode="dropdown" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -189,8 +190,8 @@
                 android:layout_height="wrap_content"
                 android:background="@android:drawable/btn_dropdown"
                 android:padding="12dp"
-                android:entries="@array/stream_types"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:spinnerMode="dropdown" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -206,8 +207,8 @@
                 android:layout_height="wrap_content"
                 android:background="@android:drawable/btn_dropdown"
                 android:padding="12dp"
-                android:entries="@array/update_rates"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:spinnerMode="dropdown" />
 
             <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/switchEnableStreaming"

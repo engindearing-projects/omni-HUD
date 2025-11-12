@@ -34,6 +34,17 @@ The plugin integrates directly into ATAK with a dashboard featuring:
 - Data streaming configuration
 - Device status preview
 
+### Dropdown Menus with Readable Text
+
+![Device Selection Dropdown](screenshots/omnihud-dropdown-devices.png)
+*USB device selection with optimized text visibility*
+
+![Stream Type Selection](screenshots/omnihud-dropdown-stream.png)
+*Configurable data streaming options*
+
+![Update Rate Selection](screenshots/omnihud-dropdown-rate.png)
+*Adjustable update frequency for power management*
+
 ## Requirements
 
 - **ATAK Version**: 5.4.0 or newer (CIV/MIL)

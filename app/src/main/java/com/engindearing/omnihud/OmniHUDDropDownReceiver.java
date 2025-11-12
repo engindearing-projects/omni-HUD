@@ -28,6 +28,7 @@ import com.atakmap.coremap.log.Log;
 import com.atakmap.coremap.maps.coords.GeoPoint;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDown.OnStateListener {
@@ -67,7 +68,7 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
     // Device list
     private List<UsbDevice> availableDevices;
-    private ArrayAdapter<String> deviceAdapter;
+    private ReadableSpinnerAdapter deviceAdapter;
 
     public OmniHUDDropDownReceiver(final MapView mapView, final Context context, View dashboardView) {
         super(mapView);
@@ -151,11 +152,28 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         btnHelp = dashboardView.findViewById(R.id.btnHelp);
 
         // Setup device spinner
+        // Use MapView's Activity context for Spinner to avoid BadTokenException when showing dialog
+        // Use ReadableSpinnerAdapter for proper text visibility
         availableDevices = new ArrayList<>();
-        deviceAdapter = new ArrayAdapter<>(pluginContext, android.R.layout.simple_spinner_item, new ArrayList<String>());
-        deviceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        deviceAdapter = new ReadableSpinnerAdapter(mapView.getContext(), new ArrayList<String>());
         if (spinnerHUDDevices != null) {
             spinnerHUDDevices.setAdapter(deviceAdapter);
+        }
+
+        // Setup stream type spinner with readable adapter
+        if (spinnerStreamType != null) {
+            String[] streamTypes = pluginContext.getResources().getStringArray(R.array.stream_types);
+            List<String> streamTypeList = Arrays.asList(streamTypes);
+            ReadableSpinnerAdapter streamTypeAdapter = new ReadableSpinnerAdapter(mapView.getContext(), streamTypeList);
+            spinnerStreamType.setAdapter(streamTypeAdapter);
+        }
+
+        // Setup update rate spinner with readable adapter
+        if (spinnerUpdateRate != null) {
+            String[] updateRates = pluginContext.getResources().getStringArray(R.array.update_rates);
+            List<String> updateRateList = Arrays.asList(updateRates);
+            ReadableSpinnerAdapter updateRateAdapter = new ReadableSpinnerAdapter(mapView.getContext(), updateRateList);
+            spinnerUpdateRate.setAdapter(updateRateAdapter);
         }
 
         setupListeners();
