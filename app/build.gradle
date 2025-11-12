@@ -113,7 +113,7 @@ def supportedFlavors =
 
 android {
     compileSdk 35
-    namespace 'com.engindearing.omnicot'
+    namespace 'com.engindearing.omnihud'
 
     buildFeatures {
         buildConfig = true
@@ -296,6 +296,7 @@ def getCommandFlavor() {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: '*.jar')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
     implementation 'androidx.annotation:annotation:1.8.2'
 
@@ -307,29 +308,14 @@ dependencies {
 
 configurations.all {
     resolutionStrategy.eachDependency { details ->
-        if (details.requested.group == 'androidx.core') {
-            details.useVersion "1.15.0"
-        }
-        if (details.requested.group == 'androidx.lifecycle') {
-            details.useVersion "2.8.7"
-        }
-        if (details.requested.group == 'androidx.fragment') {
-            details.useVersion "1.8.5"
-        }
         if (details.requested.group == 'androidx.recyclerview') {
             details.useVersion "1.3.2"
-        }
-        if (details.requested.group == 'androidx.annotation') {
-            details.useVersion "1.8.2"
         }
     }
 }           
         
 configurations.implementation {
        exclude group: 'androidx.core', module: 'core-ktx'
-       exclude group: 'androidx.core', module: 'core'
-       exclude group: 'androidx.fragment', module: 'fragment'
-       exclude group: 'androidx.lifecycle', module: 'lifecycle'
        exclude group: 'androidx.lifecycle', module: 'lifecycle-process'
 }       
 

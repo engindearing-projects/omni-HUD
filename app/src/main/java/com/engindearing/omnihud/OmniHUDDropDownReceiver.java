@@ -369,7 +369,8 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
             double lat = selfPoint.getLatitude();
             double lon = selfPoint.getLongitude();
             double alt = selfPoint.getAltitude();
-            double heading = selfPoint.getBearing();
+            // Get heading from ATAK MapView metadata (device bearing from GPS/sensors)
+            double heading = mapView.getMapData().getMetaDouble("mockLocationBearing", 0.0);
 
             // Send to HUD
             boolean success = usbManager.sendPosition(lat, lon, alt, heading, callsign);

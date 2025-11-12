@@ -26,4 +26,19 @@
         <item>10 Hz (High Performance)</item>
     </string-array>
 
+    <!-- Trigger Types -->
+    <string-array name="trigger_types">
+        <item>On Entry</item>
+        <item>On Exit</item>
+        <item>On Both</item>
+    </string-array>
+
+    <!-- Monitored Types -->
+    <string-array name="monitored_types">
+        <item>All Contacts</item>
+        <item>Friendly Only</item>
+        <item>Hostile Only</item>
+        <item>Unknown Only</item>
+    </string-array>
+
 </resources>

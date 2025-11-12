@@ -55,57 +55,22 @@ public class DashboardActivity {
     }
 
     private void initializeUI() {
-        // Status metrics
-        txtActiveAOIs = dashboardView.findViewById(R.id.txtActiveAOIs);
-        txtActiveAlerts = dashboardView.findViewById(R.id.txtActiveAlerts);
-        txtCOTModified = dashboardView.findViewById(R.id.txtCOTModified);
+        // TODO: This class is a stub for future AOI/COT management features
+        // The current omnihud_dashboard.xml is for HUD connection management
+        // These UI elements don't exist in the current layout and are commented out for compilation
 
-        // Quick action cards
-        cardCOTManagement = dashboardView.findViewById(R.id.cardCOTManagement);
-        cardAOIManagement = dashboardView.findViewById(R.id.cardAOIManagement);
-        cardCreateAlert = dashboardView.findViewById(R.id.cardCreateAlert);
-        cardViewHistory = dashboardView.findViewById(R.id.cardViewHistory);
-
-        // Recent activity
-        recentActivityRecyclerView = dashboardView.findViewById(R.id.recentActivityRecyclerView);
-        recentActivityRecyclerView.setLayoutManager(new LinearLayoutManager(context));
-
-        // Header buttons
+        // Header buttons (these exist in the layout)
         btnSettings = dashboardView.findViewById(R.id.btnSettings);
         btnHelp = dashboardView.findViewById(R.id.btnHelp);
 
-        setupListeners();
+        if (btnSettings != null && btnHelp != null) {
+            setupListeners();
+        }
     }
 
     private void setupListeners() {
-        // Quick action cards
-        cardCOTManagement.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onCOTManagementClick();
-            }
-        });
-
-        cardAOIManagement.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onAOIManagementClick();
-            }
-        });
-
-        cardCreateAlert.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onCreateAlertClick();
-            }
-        });
-
-        cardViewHistory.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onViewHistoryClick();
-            }
-        });
+        // TODO: Quick action cards not implemented yet
+        // Only setting up header buttons that exist in current layout
 
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -123,18 +88,12 @@ public class DashboardActivity {
     }
 
     public void updateStats() {
-        // Count active AOIs
+        // TODO: Stats UI not implemented in current HUD-focused dashboard
+        // Just logging for now
         int aoiCount = getAOICount();
-        txtActiveAOIs.setText(String.valueOf(aoiCount));
-
-        // Count active alerts
         int alertCount = getActiveAlertCount();
-        txtActiveAlerts.setText(String.valueOf(alertCount));
 
-        // COT modified count
-        txtCOTModified.setText(String.valueOf(cotModifiedCount));
-
-        Log.d(TAG, "Dashboard stats updated - AOIs: " + aoiCount + ", Alerts: " + alertCount + ", COT: " + cotModifiedCount);
+        Log.d(TAG, "Dashboard stats - AOIs: " + aoiCount + ", Alerts: " + alertCount + ", COT: " + cotModifiedCount);
     }
 
     private int getAOICount() {
@@ -185,16 +144,14 @@ public class DashboardActivity {
 
     private void onCOTManagementClick() {
         Log.d(TAG, "COT Management clicked");
-        if (receiver != null) {
-            receiver.showCOTManagement();
-        }
+        // TODO: showCOTManagement() not implemented yet
+        Toast.makeText(context, "COT Management - Coming Soon", Toast.LENGTH_SHORT).show();
     }
 
     private void onAOIManagementClick() {
         Log.d(TAG, "AOI Management clicked");
-        if (receiver != null) {
-            receiver.showAOIManagement();
-        }
+        // TODO: showAOIManagement() not implemented yet
+        Toast.makeText(context, "AOI Management - Coming Soon", Toast.LENGTH_SHORT).show();
     }
 
     private void onCreateAlertClick() {
