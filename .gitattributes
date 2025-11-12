@@ -1,0 +1,10 @@
+# Exclude unnecessary files from git archive (used for pipeline submissions)
+builds/ export-ignore
+screenshots/ export-ignore
+docs/ export-ignore
+make-pipeline-zip.sh export-ignore
+make-multi-version-zips.sh export-ignore
+.github/ export-ignore
+*.md export-ignore
+!README.md export-ignore
+!CONTRIBUTING.md export-ignore
