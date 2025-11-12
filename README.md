@@ -21,6 +21,19 @@ OmniHUD enables ATAK integration with HUD devices like ECOTI, allowing real-time
 - **ECOTI**: Via USB-C adapter (https://www.reddit.com/r/NightVision/comments/1oj7oiq/)
 - Additional HUD devices can be added via open-source contributions
 
+## Screenshots
+
+### OmniHUD Dashboard
+
+![OmniHUD Dashboard](screenshots/dashboard.png)
+
+The plugin integrates directly into ATAK with a dashboard featuring:
+- Real-time HUD connection status
+- USB device selection and management
+- Connect/Disconnect controls
+- Data streaming configuration
+- Device status preview
+
 ## Requirements
 
 - **ATAK Version**: 5.4.0 or newer (CIV/MIL)
