@@ -29,6 +29,7 @@ import com.atakmap.coremap.maps.coords.GeoPoint;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDown.OnStateListener {
@@ -288,6 +289,27 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         if (usbManager == null || deviceAdapter == null) {
             Log.e(TAG, "Cannot refresh device list - usbManager or deviceAdapter is null");
             return;
+        }
+
+        // DIAGNOSTIC: Get ALL USB devices, not just filtered ones
+        android.hardware.usb.UsbManager sysUsbManager =
+            (android.hardware.usb.UsbManager) pluginContext.getSystemService(Context.USB_SERVICE);
+
+        if (sysUsbManager != null) {
+            HashMap<String, UsbDevice> allDevices = sysUsbManager.getDeviceList();
+            Log.d(TAG, "=== USB DEVICE DIAGNOSTIC ===");
+            Log.d(TAG, "Total USB devices found: " + allDevices.size());
+
+            for (UsbDevice device : allDevices.values()) {
+                Log.d(TAG, String.format("Device: %s | VID=0x%04X | PID=0x%04X | Manufacturer=%s | Product=%s | HasPermission=%s",
+                    device.getDeviceName(),
+                    device.getVendorId(),
+                    device.getProductId(),
+                    device.getManufacturerName(),
+                    device.getProductName(),
+                    sysUsbManager.hasPermission(device)));
+            }
+            Log.d(TAG, "=== END DIAGNOSTIC ===");
         }
 
         availableDevices = usbManager.getAvailableDevices();
