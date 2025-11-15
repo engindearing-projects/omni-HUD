@@ -18,8 +18,8 @@
         <meta-data android:name="app_desc" android:value="@string/app_desc"/>
 
 
-       <!-- This fictitious activity entry allow for ATAK 4.6.0.2 and newer to perform 
-            plugin discovery  android devices.  If this is removed, the plugin will 
+       <!-- This fictitious activity entry allow for ATAK 4.6.0.2 and newer to perform
+            plugin discovery  android devices.  If this is removed, the plugin will
             not be able to be discovered or loaded.  -->
        <activity android:name="com.atakmap.app.component"
            android:exported="true"
@@ -27,6 +27,15 @@
            <intent-filter android:label="@string/app_name">
               <action android:name="com.atakmap.app.component" />
            </intent-filter>
+
+           <!-- USB device attachment detection -->
+           <intent-filter>
+               <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+           </intent-filter>
+
+           <!-- USB device filter - will be triggered when USB devices are connected -->
+           <!-- Note: Once ECOTI VID/PID is known, add specific meta-data filter -->
+           <!-- For now, this will allow the plugin to see USB attachment events -->
        </activity>
 
 

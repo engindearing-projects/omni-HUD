@@ -42,26 +42,51 @@ public class USBCommunicationManager {
 
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                         if (device != null) {
-                            Log.d(TAG, "USB permission granted for device: " + device.getDeviceName());
+                            Log.i(TAG, "========================================");
+                            Log.i(TAG, "✓ USB PERMISSION GRANTED");
+                            Log.i(TAG, "Device: " + device.getDeviceName());
+                            Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
+                                       "/0x" + String.format("%04X", device.getProductId()));
+                            Log.i(TAG, "Proceeding to connect...");
+                            Log.i(TAG, "========================================");
                             connectToDevice(device);
                         }
                     } else {
-                        Log.w(TAG, "USB permission denied for device: " +
-                              (device != null ? device.getDeviceName() : "unknown"));
+                        Log.e(TAG, "========================================");
+                        Log.e(TAG, "✗ USB PERMISSION DENIED");
+                        Log.e(TAG, "Device: " + (device != null ? device.getDeviceName() : "unknown"));
+                        Log.e(TAG, "User must grant USB permission for plugin to work");
+                        Log.e(TAG, "========================================");
                         if (connectionListener != null) {
-                            connectionListener.onConnectionFailed("USB permission denied");
+                            connectionListener.onConnectionFailed("USB permission denied by user");
                         }
                     }
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
                 UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                Log.d(TAG, "USB device attached: " + (device != null ? device.getDeviceName() : "unknown"));
+                Log.i(TAG, "========================================");
+                Log.i(TAG, "USB DEVICE ATTACHED EVENT");
+                if (device != null) {
+                    Log.i(TAG, "Device: " + device.getDeviceName());
+                    Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
+                               "/0x" + String.format("%04X", device.getProductId()));
+                } else {
+                    Log.w(TAG, "Device info not available in intent");
+                }
+                Log.i(TAG, "========================================");
                 if (device != null && connectionListener != null) {
                     connectionListener.onDeviceAttached(device);
                 }
             } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                Log.d(TAG, "USB device detached: " + (device != null ? device.getDeviceName() : "unknown"));
+                Log.i(TAG, "========================================");
+                Log.i(TAG, "USB DEVICE DETACHED EVENT");
+                if (device != null) {
+                    Log.i(TAG, "Device: " + device.getDeviceName());
+                } else {
+                    Log.w(TAG, "Device info not available");
+                }
+                Log.i(TAG, "========================================");
                 if (device != null && currentDevice != null && currentDevice.isConnected()) {
                     disconnect();
                     if (connectionListener != null) {
@@ -123,17 +148,51 @@ public class USBCommunicationManager {
         List<UsbDevice> devices = new ArrayList<>();
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
 
+        Log.i(TAG, "========================================");
+        Log.i(TAG, "Scanning for USB devices...");
+        Log.i(TAG, "Total USB devices connected: " + deviceList.size());
+        Log.i(TAG, "========================================");
+
+        if (deviceList.isEmpty()) {
+            Log.w(TAG, "No USB devices detected. Make sure ECOTI is connected via USB-C.");
+            return devices;
+        }
+
+        // List all USB devices first (for debugging)
+        int deviceNum = 1;
         for (UsbDevice device : deviceList.values()) {
+            Log.i(TAG, "USB Device #" + deviceNum + ":");
+            Log.i(TAG, "  Name: " + device.getDeviceName());
+            Log.i(TAG, "  VID: 0x" + String.format("%04X", device.getVendorId()));
+            Log.i(TAG, "  PID: 0x" + String.format("%04X", device.getProductId()));
+            deviceNum++;
+        }
+        Log.i(TAG, "========================================");
+
+        // Check each device against supported HUD drivers
+        for (UsbDevice device : deviceList.values()) {
+            Log.d(TAG, "Checking if " + device.getDeviceName() + " is supported...");
+
             // Check if any supported HUD device can handle this USB device
             for (HUDDevice hudDevice : supportedDevices) {
                 if (hudDevice.supportsDevice(device)) {
+                    Log.i(TAG, "✓ Device " + device.getDeviceName() + " is supported by " +
+                               hudDevice.getDeviceName() + " driver");
                     devices.add(device);
                     break;
                 }
             }
         }
 
-        Log.d(TAG, "Found " + devices.size() + " potential HUD devices");
+        Log.i(TAG, "========================================");
+        if (devices.isEmpty()) {
+            Log.w(TAG, "✗ No compatible HUD devices found");
+            Log.w(TAG, "If ECOTI is connected, check the logs above for device details");
+        } else {
+            Log.i(TAG, "✓ Found " + devices.size() + " compatible HUD device(s)");
+        }
+        Log.i(TAG, "========================================");
+
         return devices;
     }
 
@@ -141,11 +200,22 @@ public class USBCommunicationManager {
      * Request permission and connect to a USB device
      */
     public void requestConnectionToDevice(UsbDevice device) {
+        Log.i(TAG, "========================================");
+        Log.i(TAG, "Connection request initiated");
+        Log.i(TAG, "Device: " + device.getDeviceName());
+        Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
+                   "/0x" + String.format("%04X", device.getProductId()));
+
         if (usbManager.hasPermission(device)) {
-            Log.d(TAG, "Already have permission, connecting directly");
+            Log.i(TAG, "✓ USB permission already granted");
+            Log.i(TAG, "Connecting directly...");
+            Log.i(TAG, "========================================");
             connectToDevice(device);
         } else {
-            Log.d(TAG, "Requesting USB permission for device: " + device.getDeviceName());
+            Log.i(TAG, "⚠ USB permission not yet granted");
+            Log.i(TAG, "Requesting permission from user...");
+            Log.i(TAG, "========================================");
+
             PendingIntent permissionIntent = PendingIntent.getBroadcast(
                 context,
                 0,
@@ -155,6 +225,7 @@ public class USBCommunicationManager {
                     : PendingIntent.FLAG_UPDATE_CURRENT
             );
             usbManager.requestPermission(device, permissionIntent);
+            Log.d(TAG, "Permission dialog should appear on user's screen");
         }
     }
 
@@ -162,36 +233,57 @@ public class USBCommunicationManager {
      * Connect to a specific USB device
      */
     private void connectToDevice(UsbDevice device) {
+        Log.i(TAG, "========================================");
+        Log.i(TAG, "Starting device connection process...");
+
         // Disconnect any existing connection
         if (currentDevice != null && currentDevice.isConnected()) {
+            Log.d(TAG, "Disconnecting existing device first...");
             disconnect();
         }
 
         // Find the appropriate HUD device implementation
+        boolean foundDriver = false;
         for (HUDDevice hudDevice : supportedDevices) {
             if (hudDevice.supportsDevice(device)) {
-                Log.d(TAG, "Attempting connection with " + hudDevice.getDeviceName() + " driver");
+                foundDriver = true;
+                Log.i(TAG, "Using " + hudDevice.getDeviceName() + " driver");
+                Log.i(TAG, "Attempting connection...");
 
                 if (hudDevice.connect(device)) {
                     currentDevice = hudDevice;
-                    Log.d(TAG, "Successfully connected to " + hudDevice.getDeviceName());
+                    Log.i(TAG, "========================================");
+                    Log.i(TAG, "✓✓✓ CONNECTION SUCCESSFUL ✓✓✓");
+                    Log.i(TAG, "HUD Device: " + hudDevice.getDeviceName());
+                    Log.i(TAG, "Status: " + hudDevice.getStatusString());
+                    Log.i(TAG, "========================================");
 
                     if (connectionListener != null) {
                         connectionListener.onConnected(hudDevice);
                     }
                     return;
                 } else {
-                    Log.w(TAG, "Failed to connect with " + hudDevice.getDeviceName() +
-                          " driver: " + hudDevice.getLastError());
+                    Log.e(TAG, "========================================");
+                    Log.e(TAG, "✗ CONNECTION FAILED");
+                    Log.e(TAG, "Driver: " + hudDevice.getDeviceName());
+                    Log.e(TAG, "Error: " + hudDevice.getLastError());
+                    Log.e(TAG, "========================================");
                 }
             }
         }
 
         // No device could connect
-        String error = "No compatible HUD driver found for device";
-        Log.e(TAG, error);
-        if (connectionListener != null) {
-            connectionListener.onConnectionFailed(error);
+        if (!foundDriver) {
+            String error = "No compatible HUD driver found for device";
+            Log.e(TAG, "========================================");
+            Log.e(TAG, "✗ NO COMPATIBLE DRIVER");
+            Log.e(TAG, error);
+            Log.e(TAG, "Device VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
+                       "/0x" + String.format("%04X", device.getProductId()));
+            Log.e(TAG, "========================================");
+            if (connectionListener != null) {
+                connectionListener.onConnectionFailed(error);
+            }
         }
     }
 
