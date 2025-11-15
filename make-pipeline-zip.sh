@@ -1,12 +1,12 @@
 #!/bin/bash
-# OmniCOT Pipeline Submission Zip Creator
+# OmniHUD Pipeline Submission Zip Creator
 # Creates a clean zip for TAK third-party pipeline submission
 # Usage: ./make-pipeline-zip.sh
 
 set -e
 
 echo "=================================================="
-echo "OmniCOT Pipeline Submission Zip Creator"
+echo "OmniHUD Pipeline Submission Zip Creator"
 echo "=================================================="
 echo ""
 
