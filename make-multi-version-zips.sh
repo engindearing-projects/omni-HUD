@@ -65,9 +65,9 @@ create_version_zip() {
     sed -i.bak "s/ext.ATAK_VERSION = \"[^\"]*\"/ext.ATAK_VERSION = \"${VERSION}\"/" app/build.gradle
     rm app/build.gradle.bak
 
-    # Commit the change
+    # Commit the change (use --allow-empty in case version is already correct)
     git add app/build.gradle
-    git commit -m "Set ATAK version to ${VERSION} for pipeline submission" >/dev/null 2>&1
+    git commit --allow-empty -m "Set ATAK version to ${VERSION} for pipeline submission" >/dev/null 2>&1
 
     # Create zip with git archive from current branch
     echo "  Creating archive..."
