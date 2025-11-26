@@ -24,17 +24,14 @@ public class ECOTIDevice implements HUDDevice {
 
     private static final String TAG = ECOTIDevice.class.getSimpleName();
 
-    // ECOTI USB identifiers - these will need to be updated with actual VID/PID
-    // TODO: Update these with actual ECOTI USB VID/PID values from device testing
-    // Common USB-Serial chip vendors that ECOTI might use:
-    // - FTDI: 0x0403
-    // - Prolific: 0x067B
-    // - CP210x: 0x10C4
-    private static final int ECOTI_VENDOR_ID = 0x0000;  // Placeholder - will be detected
-    private static final int ECOTI_PRODUCT_ID = 0x0000; // Placeholder - will be detected
+    // ECOTI USB identifiers
+    // VID 0x07FF (2047) = Texas Instruments, PID 0x0104 (260) = ECOTI device
+    private static final int ECOTI_VENDOR_ID = 0x07FF;   // Texas Instruments (2047 decimal)
+    private static final int ECOTI_PRODUCT_ID = 0x0104;  // ECOTI device (260 decimal)
 
-    // Known USB-Serial converter vendor IDs (likely candidates for ECOTI)
+    // Known USB-Serial converter vendor IDs (fallback detection)
     private static final int[] USB_SERIAL_VENDORS = {
+        0x07FF,  // Texas Instruments (ECOTI uses TI chip)
         0x0403,  // FTDI
         0x067B,  // Prolific
         0x10C4,  // Silicon Labs CP210x
