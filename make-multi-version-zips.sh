@@ -32,7 +32,7 @@ if ! git diff-index --quiet HEAD --; then
 fi
 
 # Define versions to build
-VERSIONS=("5.3.0" "5.4.0" "5.5.1")
+VERSIONS=("5.3.0" "5.4.0" "5.5.0")
 OUTPUT_DIR="$SCRIPT_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
