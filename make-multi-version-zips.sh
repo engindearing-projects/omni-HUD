@@ -1,7 +1,9 @@
 #!/bin/bash
 # OmniHUD Multi-Version Pipeline Submission Zip Creator
 # Creates clean zips for TAK third-party pipeline submission for multiple ATAK versions
-# Usage: ./make-multi-version-zips.sh
+# Usage: ./make-multi-version-zips.sh [ATAK_VERSION ...]
+#   e.g. ./make-multi-version-zips.sh 5.2.0        (one version)
+#        ./make-multi-version-zips.sh              (default list below)
 
 set -e
 
@@ -31,8 +33,12 @@ if ! git diff-index --quiet HEAD --; then
     fi
 fi
 
-# Define versions to build
-VERSIONS=("5.3.0" "5.4.0" "5.5.0")
+# Versions to build: from the command line, or the default list
+if [ "$#" -gt 0 ]; then
+    VERSIONS=("$@")
+else
+    VERSIONS=("5.3.0" "5.4.0" "5.5.0")
+fi
 OUTPUT_DIR="$SCRIPT_DIR"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
