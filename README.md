@@ -41,7 +41,7 @@ The plugin integrates directly into ATAK with a dashboard featuring:
 
 ## Requirements
 
-- **ATAK Version**: 5.4.0 or newer (CIV/MIL)
+- **ATAK Version**: 5.2.0 to 5.5.0 (CIV/MIL), one GitHub release per ATAK version
 - **Android**: 5.0 (API 21) or higher
 - **Hardware**: USB-C capable Android device
 - **HUD Device**: Compatible heads-up display unit
