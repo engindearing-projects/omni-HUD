@@ -5,6 +5,8 @@ docs/ export-ignore
 make-pipeline-zip.sh export-ignore
 make-multi-version-zips.sh export-ignore
 .github/ export-ignore
+*.zip export-ignore
 *.md export-ignore
-!README.md export-ignore
-!CONTRIBUTING.md export-ignore
+# git attributes have no "!" negation; unset the attribute for the two files to keep
+README.md -export-ignore
+CONTRIBUTING.md -export-ignore
