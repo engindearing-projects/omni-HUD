@@ -130,6 +130,18 @@
                 android:layout_marginBottom="12dp"
                 android:spinnerMode="dropdown" />
 
+            <!-- USB IDs, classes and endpoints of the selected device, readable from a screenshot -->
+            <TextView
+                android:id="@+id/txtUsbDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select a device to see its USB details"
+                android:textSize="11sp"
+                android:textColor="#AAAAAA"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true"
+                android:paddingBottom="12dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -294,11 +306,19 @@
             android:layout_marginBottom="8dp"
             android:enabled="false" />
 
+        <Button
+            android:id="@+id/btnCopyUsbReport"
+            style="@style/darkButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Copy USB Report"
+            android:layout_marginBottom="8dp" />
+
         <!-- Footer -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="OmniHUD v0.1 - USB-C HUD Integration for ATAK"
+            android:text="OmniHUD v0.2 - USB-C HUD Integration for ATAK"
             android:textSize="10sp"
             android:textColor="#666666"
             android:textAlignment="center"

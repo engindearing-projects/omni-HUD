@@ -1,101 +1,38 @@
 package com.engindearing.omnihud;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
 
 import com.atakmap.coremap.log.Log;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 /**
- * Manages USB communication with HUD devices.
- * Handles device discovery, permissions, and connection lifecycle.
+ * Lists USB devices, asks Android for permission and owns the HUD link.
+ *
+ * Everything Android attributes to an app (the broadcast receiver and the permission
+ * PendingIntent) goes through ATAK's own context. The plugin context reports the plugin's
+ * package name, and ATAK's process may not create a PendingIntent for another package, so in
+ * 0.1 the permission request failed before Android could show its prompt.
  */
 public class USBCommunicationManager {
 
     private static final String TAG = USBCommunicationManager.class.getSimpleName();
     private static final String ACTION_USB_PERMISSION = "com.engindearing.omnihud.USB_PERMISSION";
-
-    private Context context;
-    private UsbManager usbManager;
-    private HUDDevice currentDevice;
-    private List<HUDDevice> supportedDevices;
-
-    private ConnectionListener connectionListener;
-
-    private final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-
-            if (ACTION_USB_PERMISSION.equals(action)) {
-                synchronized (this) {
-                    UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        if (device != null) {
-                            Log.i(TAG, "========================================");
-                            Log.i(TAG, "✓ USB PERMISSION GRANTED");
-                            Log.i(TAG, "Device: " + device.getDeviceName());
-                            Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
-                                       "/0x" + String.format("%04X", device.getProductId()));
-                            Log.i(TAG, "Proceeding to connect...");
-                            Log.i(TAG, "========================================");
-                            connectToDevice(device);
-                        }
-                    } else {
-                        Log.e(TAG, "========================================");
-                        Log.e(TAG, "✗ USB PERMISSION DENIED");
-                        Log.e(TAG, "Device: " + (device != null ? device.getDeviceName() : "unknown"));
-                        Log.e(TAG, "User must grant USB permission for plugin to work");
-                        Log.e(TAG, "========================================");
-                        if (connectionListener != null) {
-                            connectionListener.onConnectionFailed("USB permission denied by user");
-                        }
-                    }
-                }
-            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-                UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                Log.i(TAG, "========================================");
-                Log.i(TAG, "USB DEVICE ATTACHED EVENT");
-                if (device != null) {
-                    Log.i(TAG, "Device: " + device.getDeviceName());
-                    Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
-                               "/0x" + String.format("%04X", device.getProductId()));
-                } else {
-                    Log.w(TAG, "Device info not available in intent");
-                }
-                Log.i(TAG, "========================================");
-                if (device != null && connectionListener != null) {
-                    connectionListener.onDeviceAttached(device);
-                }
-            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-                UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                Log.i(TAG, "========================================");
-                Log.i(TAG, "USB DEVICE DETACHED EVENT");
-                if (device != null) {
-                    Log.i(TAG, "Device: " + device.getDeviceName());
-                } else {
-                    Log.w(TAG, "Device info not available");
-                }
-                Log.i(TAG, "========================================");
-                if (device != null && currentDevice != null && currentDevice.isConnected()) {
-                    disconnect();
-                    if (connectionListener != null) {
-                        connectionListener.onDeviceDetached();
-                    }
-                }
-            }
-        }
-    };
 
     public interface ConnectionListener {
         void onConnected(HUDDevice device);
@@ -103,254 +40,292 @@ public class USBCommunicationManager {
         void onConnectionFailed(String error);
         void onDeviceAttached(UsbDevice device);
         void onDeviceDetached();
+        /** Link activity worth showing, such as send results or data from the device. Called off the UI thread. */
+        void onLinkEvent(String message);
     }
 
-    public USBCommunicationManager(Context context) {
-        if (context == null) {
-            Log.e(TAG, "Context is null in USBCommunicationManager constructor!");
-            throw new IllegalArgumentException("Context cannot be null");
-        }
-        this.context = context.getApplicationContext();
-        if (this.context == null) {
-            // Fallback to provided context if getApplicationContext() returns null
-            this.context = context;
-        }
-        this.usbManager = (UsbManager) this.context.getSystemService(Context.USB_SERVICE);
-        this.supportedDevices = new ArrayList<>();
+    private final Context hostContext;
+    private final UsbManager usbManager;
+    private final UsbEventLog eventLog = new UsbEventLog(150);
+    private final ECOTIDevice ecoti;
+    private volatile HUDDevice currentDevice;
+    private volatile String connectedDeviceName;
+    private volatile ConnectionListener connectionListener;
+    private boolean receiverRegistered;
 
-        // Register supported HUD devices
-        supportedDevices.add(new ECOTIDevice(usbManager));
-        // Additional HUD devices can be added here
+    private final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (ACTION_USB_PERMISSION.equals(action)) {
+                boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
+                log("USB permission " + (granted ? "granted" : "denied") + " for " + name(device));
+                if (granted && device != null) {
+                    connectToDevice(device);
+                } else {
+                    failed("USB permission was not granted for " + name(device) + ".");
+                }
+            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                log("Attached: " + name(device));
+                ConnectionListener l = connectionListener;
+                if (device != null && l != null) {
+                    l.onDeviceAttached(device);
+                }
+            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                log("Detached: " + name(device));
+                String connected = connectedDeviceName;
+                if (device != null && connected != null && connected.equals(device.getDeviceName())) {
+                    disconnect();
+                }
+                ConnectionListener l = connectionListener;
+                if (l != null) {
+                    l.onDeviceDetached();
+                }
+            }
+        }
+    };
 
-        // Register USB broadcast receiver
+    /**
+     * @param hostContext ATAK's context, for example {@code mapView.getContext()}. Not the plugin context.
+     */
+    // Before Android 13 there is no RECEIVER_NOT_EXPORTED flag, so the receiver is exported there.
+    // That is safe: a spoofed "permission granted" broadcast cannot open a device, because
+    // ECOTIDevice.connect() checks UsbManager.hasPermission() before it opens anything.
+    // ContextCompat's workaround would tie delivery to a permission declared in ATAK's manifest.
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    public USBCommunicationManager(Context hostContext) {
+        if (hostContext == null) {
+            throw new IllegalArgumentException("hostContext cannot be null");
+        }
+        Context app = hostContext.getApplicationContext();
+        this.hostContext = app != null ? app : hostContext;
+        this.usbManager = (UsbManager) this.hostContext.getSystemService(Context.USB_SERVICE);
+        this.ecoti = new ECOTIDevice(usbManager, eventLog);
+        ecoti.setLinkListener(message -> {
+            ConnectionListener l = connectionListener;
+            if (l != null) {
+                l.onLinkEvent(message);
+            }
+        });
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            this.context.registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            this.context.registerReceiver(usbReceiver, filter);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                this.hostContext.registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                this.hostContext.registerReceiver(usbReceiver, filter);
+            }
+            receiverRegistered = true;
+        } catch (RuntimeException e) {
+            log("Could not register the USB receiver: " + e.getMessage());
         }
-
-        Log.d(TAG, "USBCommunicationManager initialized with " + supportedDevices.size() + " device types");
+        log("USB manager ready in " + this.hostContext.getPackageName()
+                + (usbManager == null ? ", but this phone reports no USB host service" : ""));
     }
 
     public void setConnectionListener(ConnectionListener listener) {
         this.connectionListener = listener;
     }
 
-    /**
-     * Get list of connected USB devices that could be HUD devices
-     */
+    /** Every USB device Android reports, best HUD candidates first. Nothing is filtered out. */
     public List<UsbDevice> getAvailableDevices() {
         List<UsbDevice> devices = new ArrayList<>();
-        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-
-        Log.i(TAG, "========================================");
-        Log.i(TAG, "Scanning for USB devices...");
-        Log.i(TAG, "Total USB devices connected: " + deviceList.size());
-        Log.i(TAG, "========================================");
-
-        if (deviceList.isEmpty()) {
-            Log.w(TAG, "No USB devices detected. Make sure ECOTI is connected via USB-C.");
+        if (usbManager == null) {
             return devices;
         }
-
-        // List all USB devices first (for debugging)
-        int deviceNum = 1;
-        for (UsbDevice device : deviceList.values()) {
-            Log.i(TAG, "USB Device #" + deviceNum + ":");
-            Log.i(TAG, "  Name: " + device.getDeviceName());
-            Log.i(TAG, "  VID: 0x" + String.format("%04X", device.getVendorId()));
-            Log.i(TAG, "  PID: 0x" + String.format("%04X", device.getProductId()));
-            deviceNum++;
+        devices.addAll(usbManager.getDeviceList().values());
+        Collections.sort(devices, (a, b) -> {
+            int byRank = Integer.compare(rank(a), rank(b));
+            return byRank != 0 ? byRank : a.getDeviceName().compareTo(b.getDeviceName());
+        });
+        StringBuilder sb = new StringBuilder();
+        for (UsbDevice d : devices) {
+            sb.append(sb.length() == 0 ? ": " : "; ").append(label(d));
         }
-        Log.i(TAG, "========================================");
-
-        // Check each device against supported HUD drivers
-        for (UsbDevice device : deviceList.values()) {
-            Log.d(TAG, "Checking if " + device.getDeviceName() + " is supported...");
-
-            // Check if any supported HUD device can handle this USB device
-            for (HUDDevice hudDevice : supportedDevices) {
-                if (hudDevice.supportsDevice(device)) {
-                    Log.i(TAG, "✓ Device " + device.getDeviceName() + " is supported by " +
-                               hudDevice.getDeviceName() + " driver");
-                    devices.add(device);
-                    break;
-                }
-            }
-        }
-
-        Log.i(TAG, "========================================");
-        if (devices.isEmpty()) {
-            Log.w(TAG, "✗ No compatible HUD devices found");
-            Log.w(TAG, "If ECOTI is connected, check the logs above for device details");
-        } else {
-            Log.i(TAG, "✓ Found " + devices.size() + " compatible HUD device(s)");
-        }
-        Log.i(TAG, "========================================");
-
+        log(devices.size() + " USB device(s) visible" + sb);
         return devices;
     }
 
-    /**
-     * Request permission and connect to a USB device
-     */
+    /** One-line label for the device list. */
+    public String label(UsbDevice device) {
+        return UsbDeviceClassifier.label(UsbDescriptors.from(device));
+    }
+
+    /** Multi-line USB details for the dashboard. */
+    public String describe(UsbDevice device) {
+        UsbDescriptorInfo info = UsbDescriptors.from(device);
+        return info.describe()
+                + "\n  link: " + UsbLinkPlan.plan(info).describe()
+                + "\n  USB permission: " + (usbManager != null && usbManager.hasPermission(device) ? "granted" : "not granted yet");
+    }
+
+    /** Ask Android for permission if needed, then connect. The result arrives on the listener. */
     public void requestConnectionToDevice(UsbDevice device) {
-        Log.i(TAG, "========================================");
-        Log.i(TAG, "Connection request initiated");
-        Log.i(TAG, "Device: " + device.getDeviceName());
-        Log.i(TAG, "VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
-                   "/0x" + String.format("%04X", device.getProductId()));
-
+        if (usbManager == null) {
+            failed("This phone reports no USB host service.");
+            return;
+        }
+        log("Connect requested: " + label(device));
         if (usbManager.hasPermission(device)) {
-            Log.i(TAG, "✓ USB permission already granted");
-            Log.i(TAG, "Connecting directly...");
-            Log.i(TAG, "========================================");
             connectToDevice(device);
-        } else {
-            Log.i(TAG, "⚠ USB permission not yet granted");
-            Log.i(TAG, "Requesting permission from user...");
-            Log.i(TAG, "========================================");
-
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(
-                context,
-                0,
-                new Intent(ACTION_USB_PERMISSION),
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    ? PendingIntent.FLAG_MUTABLE
-                    : PendingIntent.FLAG_UPDATE_CURRENT
-            );
+            return;
+        }
+        try {
+            // Explicit package (ATAK's) and FLAG_MUTABLE: Android 14+ rejects mutable implicit
+            // PendingIntents, and the USB service has to fill in the device and the grant result.
+            Intent intent = new Intent(ACTION_USB_PERMISSION).setPackage(hostContext.getPackageName());
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                flags |= PendingIntent.FLAG_MUTABLE;
+            }
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(hostContext, 0, intent, flags);
             usbManager.requestPermission(device, permissionIntent);
-            Log.d(TAG, "Permission dialog should appear on user's screen");
+            log("Asked Android for USB permission");
+        } catch (RuntimeException e) {
+            failed("Could not ask Android for USB permission: " + e.getMessage());
         }
     }
 
-    /**
-     * Connect to a specific USB device
-     */
     private void connectToDevice(UsbDevice device) {
-        Log.i(TAG, "========================================");
-        Log.i(TAG, "Starting device connection process...");
-
-        // Disconnect any existing connection
-        if (currentDevice != null && currentDevice.isConnected()) {
-            Log.d(TAG, "Disconnecting existing device first...");
+        if (isConnected()) {
             disconnect();
         }
-
-        // Find the appropriate HUD device implementation
-        boolean foundDriver = false;
-        for (HUDDevice hudDevice : supportedDevices) {
-            if (hudDevice.supportsDevice(device)) {
-                foundDriver = true;
-                Log.i(TAG, "Using " + hudDevice.getDeviceName() + " driver");
-                Log.i(TAG, "Attempting connection...");
-
-                if (hudDevice.connect(device)) {
-                    currentDevice = hudDevice;
-                    Log.i(TAG, "========================================");
-                    Log.i(TAG, "✓✓✓ CONNECTION SUCCESSFUL ✓✓✓");
-                    Log.i(TAG, "HUD Device: " + hudDevice.getDeviceName());
-                    Log.i(TAG, "Status: " + hudDevice.getStatusString());
-                    Log.i(TAG, "========================================");
-
-                    if (connectionListener != null) {
-                        connectionListener.onConnected(hudDevice);
-                    }
-                    return;
-                } else {
-                    Log.e(TAG, "========================================");
-                    Log.e(TAG, "✗ CONNECTION FAILED");
-                    Log.e(TAG, "Driver: " + hudDevice.getDeviceName());
-                    Log.e(TAG, "Error: " + hudDevice.getLastError());
-                    Log.e(TAG, "========================================");
-                }
+        if (ecoti.connect(device)) {
+            currentDevice = ecoti;
+            connectedDeviceName = device.getDeviceName();
+            ConnectionListener l = connectionListener;
+            if (l != null) {
+                l.onConnected(ecoti);
             }
-        }
-
-        // No device could connect
-        if (!foundDriver) {
-            String error = "No compatible HUD driver found for device";
-            Log.e(TAG, "========================================");
-            Log.e(TAG, "✗ NO COMPATIBLE DRIVER");
-            Log.e(TAG, error);
-            Log.e(TAG, "Device VID/PID: 0x" + String.format("%04X", device.getVendorId()) +
-                       "/0x" + String.format("%04X", device.getProductId()));
-            Log.e(TAG, "========================================");
-            if (connectionListener != null) {
-                connectionListener.onConnectionFailed(error);
-            }
-        }
-    }
-
-    /**
-     * Disconnect from current HUD device
-     */
-    public void disconnect() {
-        if (currentDevice != null) {
-            currentDevice.disconnect();
+        } else {
             currentDevice = null;
-
-            if (connectionListener != null) {
-                connectionListener.onDisconnected();
-            }
-
-            Log.d(TAG, "Disconnected from HUD device");
+            connectedDeviceName = null;
+            String error = ecoti.getLastError();
+            failed(error != null ? error : "Connection failed.");
         }
     }
 
-    /**
-     * Check if currently connected to a HUD device
-     */
-    public boolean isConnected() {
-        return currentDevice != null && currentDevice.isConnected();
+    public void disconnect() {
+        HUDDevice device = currentDevice;
+        currentDevice = null;
+        connectedDeviceName = null;
+        if (device != null) {
+            device.disconnect();
+            ConnectionListener l = connectionListener;
+            if (l != null) {
+                l.onDisconnected();
+            }
+        }
     }
 
-    /**
-     * Get the currently connected device
-     */
+    public boolean isConnected() {
+        HUDDevice device = currentDevice;
+        return device != null && device.isConnected();
+    }
+
     public HUDDevice getCurrentDevice() {
         return currentDevice;
     }
 
-    /**
-     * Send CoT data to the connected HUD device
-     */
     public boolean sendCotData(String cotXml) {
-        if (currentDevice == null || !currentDevice.isConnected()) {
+        HUDDevice device = currentDevice;
+        if (device == null || !device.isConnected()) {
             Log.w(TAG, "Cannot send data: not connected to HUD device");
             return false;
         }
-
-        return currentDevice.sendCotData(cotXml);
+        return device.sendCotData(cotXml);
     }
 
-    /**
-     * Send position data to the connected HUD device
-     */
     public boolean sendPosition(double lat, double lon, double alt, double heading, String callsign) {
-        if (currentDevice == null || !currentDevice.isConnected()) {
+        HUDDevice device = currentDevice;
+        if (device == null || !device.isConnected()) {
             Log.w(TAG, "Cannot send position: not connected to HUD device");
             return false;
         }
-
-        return currentDevice.sendPosition(lat, lon, alt, heading, callsign);
+        return device.sendPosition(lat, lon, alt, heading, callsign);
     }
 
     /**
-     * Clean up resources
+     * Plain-text report for the user to paste into an email: phone, ATAK version, every USB device
+     * with its full descriptors, the last connection attempt and recent USB events. No location data.
      */
-    public void dispose() {
-        try {
-            disconnect();
-            context.unregisterReceiver(usbReceiver);
-            Log.d(TAG, "USBCommunicationManager disposed");
-        } catch (Exception e) {
-            Log.e(TAG, "Error disposing USBCommunicationManager", e);
+    public String buildReport() {
+        SimpleDateFormat utc = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss'Z'", Locale.US);
+        utc.setTimeZone(TimeZone.getTimeZone("UTC"));
+        StringBuilder sb = new StringBuilder();
+        sb.append("OmniHUD USB report, ").append(utc.format(new Date())).append('\n');
+        sb.append("Plugin: ").append(BuildConfig.VERSION_NAME).append('\n');
+        sb.append("Phone: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL)
+                .append(", Android ").append(Build.VERSION.RELEASE)
+                .append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
+        sb.append("ATAK: ").append(hostContext.getPackageName()).append(' ').append(hostVersion()).append('\n');
+
+        List<UsbDevice> devices = getAvailableDevices();
+        sb.append("\nUSB devices visible to Android: ").append(devices.size()).append('\n');
+        int n = 1;
+        for (UsbDevice d : devices) {
+            UsbDescriptorInfo info = UsbDescriptors.from(d);
+            sb.append('\n').append(n++).append(". ").append(UsbDeviceClassifier.label(info)).append('\n');
+            sb.append(info.describe()).append('\n');
+            sb.append("  link: ").append(UsbLinkPlan.plan(info).describe()).append('\n');
+            sb.append("  USB permission: ").append(usbManager.hasPermission(d) ? "granted" : "not granted").append('\n');
         }
+        sb.append("\nConnection\n").append(ecoti.diagnostics());
+        sb.append("\nRecent USB events\n");
+        for (String line : eventLog.snapshot()) {
+            sb.append(line).append('\n');
+        }
+        return sb.toString();
+    }
+
+    public void dispose() {
+        disconnect();
+        if (receiverRegistered) {
+            try {
+                hostContext.unregisterReceiver(usbReceiver);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Error unregistering the USB receiver", e);
+            }
+            receiverRegistered = false;
+        }
+        Log.d(TAG, "USBCommunicationManager disposed");
+    }
+
+    private int rank(UsbDevice device) {
+        return UsbDeviceClassifier.rank(UsbDescriptors.from(device));
+    }
+
+    private String hostVersion() {
+        try {
+            PackageInfo pi = hostContext.getPackageManager().getPackageInfo(hostContext.getPackageName(), 0);
+            return pi.versionName != null ? pi.versionName : "unknown version";
+        } catch (Exception e) {
+            return "unknown version";
+        }
+    }
+
+    private void failed(String error) {
+        log("Failed: " + error);
+        ConnectionListener l = connectionListener;
+        if (l != null) {
+            l.onConnectionFailed(error);
+        }
+    }
+
+    private void log(String message) {
+        Log.i(TAG, message);
+        eventLog.add(message);
+    }
+
+    private static String name(UsbDevice device) {
+        if (device == null) {
+            return "unknown device";
+        }
+        return String.format(Locale.US, "%04X:%04X %s", device.getVendorId(), device.getProductId(),
+                device.getDeviceName());
     }
 }

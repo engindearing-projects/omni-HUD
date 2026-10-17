@@ -1,13 +1,15 @@
 package com.engindearing.omnihud;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -29,7 +31,6 @@ import com.atakmap.coremap.maps.coords.GeoPoint;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDown.OnStateListener {
@@ -66,6 +67,9 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
     private Button btnTestConnection;
     private ImageButton btnSettings;
     private ImageButton btnHelp;
+    private TextView txtUsbDetails;
+    private Button btnCopyUsbReport;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     // Device list
     private List<UsbDevice> availableDevices;
@@ -82,8 +86,9 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         eventDispatcher = mapView.getMapEventDispatcher();
         setupMapEventListeners();
 
-        // Initialize USB communication manager
-        usbManager = new USBCommunicationManager(pluginContext);
+        // ATAK's context, not the plugin context: Android attributes the USB receiver and the
+        // permission request to the package this context reports.
+        usbManager = new USBCommunicationManager(mapView.getContext());
         usbManager.setConnectionListener(new USBCommunicationManager.ConnectionListener() {
             @Override
             public void onConnected(HUDDevice device) {
@@ -101,19 +106,27 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
             @Override
             public void onConnectionFailed(String error) {
                 updateConnectionStatus(false, null);
+                if (txtDeviceInfo != null) {
+                    txtDeviceInfo.setText("Last attempt failed: " + error);
+                }
                 Toast.makeText(pluginContext, "Connection failed: " + error, Toast.LENGTH_LONG).show();
                 Log.e(TAG, "Connection failed: " + error);
             }
 
             @Override
             public void onDeviceAttached(UsbDevice device) {
-                Toast.makeText(pluginContext, "USB device attached", Toast.LENGTH_SHORT).show();
+                Toast.makeText(pluginContext, "USB device attached: " + usbManager.label(device), Toast.LENGTH_LONG).show();
                 refreshDeviceList();
             }
 
             @Override
             public void onDeviceDetached() {
                 refreshDeviceList();
+            }
+
+            @Override
+            public void onLinkEvent(String message) {
+                uiHandler.post(() -> showLinkEvent(message));
             }
         });
 
@@ -133,6 +146,7 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
         // Device selection
         spinnerHUDDevices = dashboardView.findViewById(R.id.spinnerHUDDevices);
+        txtUsbDetails = dashboardView.findViewById(R.id.txtUsbDetails);
         btnConnect = dashboardView.findViewById(R.id.btnConnect);
         btnDisconnect = dashboardView.findViewById(R.id.btnDisconnect);
 
@@ -147,6 +161,7 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         // Advanced buttons
         btnRefreshDevices = dashboardView.findViewById(R.id.btnRefreshDevices);
         btnTestConnection = dashboardView.findViewById(R.id.btnTestConnection);
+        btnCopyUsbReport = dashboardView.findViewById(R.id.btnCopyUsbReport);
 
         // Header buttons
         btnSettings = dashboardView.findViewById(R.id.btnSettings);
@@ -159,6 +174,17 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
         deviceAdapter = new ReadableSpinnerAdapter(mapView.getContext(), new ArrayList<String>());
         if (spinnerHUDDevices != null) {
             spinnerHUDDevices.setAdapter(deviceAdapter);
+            spinnerHUDDevices.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    updateUsbDetails(position);
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    updateUsbDetails(-1);
+                }
+            });
         }
 
         // Setup stream type spinner with readable adapter
@@ -198,6 +224,10 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
         if (btnTestConnection != null) {
             btnTestConnection.setOnClickListener(v -> sendTestData());
+        }
+
+        if (btnCopyUsbReport != null) {
+            btnCopyUsbReport.setOnClickListener(v -> copyUsbReport());
         }
 
         if (switchEnableStreaming != null) {
@@ -291,27 +321,8 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
             return;
         }
 
-        // DIAGNOSTIC: Get ALL USB devices, not just filtered ones
-        android.hardware.usb.UsbManager sysUsbManager =
-            (android.hardware.usb.UsbManager) pluginContext.getSystemService(Context.USB_SERVICE);
-
-        if (sysUsbManager != null) {
-            HashMap<String, UsbDevice> allDevices = sysUsbManager.getDeviceList();
-            Log.d(TAG, "=== USB DEVICE DIAGNOSTIC ===");
-            Log.d(TAG, "Total USB devices found: " + allDevices.size());
-
-            for (UsbDevice device : allDevices.values()) {
-                Log.d(TAG, String.format("Device: %s | VID=0x%04X | PID=0x%04X | Manufacturer=%s | Product=%s | HasPermission=%s",
-                    device.getDeviceName(),
-                    device.getVendorId(),
-                    device.getProductId(),
-                    device.getManufacturerName(),
-                    device.getProductName(),
-                    sysUsbManager.hasPermission(device)));
-            }
-            Log.d(TAG, "=== END DIAGNOSTIC ===");
-        }
-
+        // Every device Android reports is listed, best HUD candidates first. 0.1 hid anything
+        // that missed a short allow-list, which is how a real e-COTY ended up invisible.
         availableDevices = usbManager.getAvailableDevices();
 
         deviceAdapter.clear();
@@ -322,19 +333,59 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
             }
         } else {
             for (UsbDevice device : availableDevices) {
-                String deviceName = device.getProductName() != null ? device.getProductName() :
-                                   "USB Device " + String.format("0x%04X:0x%04X",
-                                                                device.getVendorId(),
-                                                                device.getProductId());
-                deviceAdapter.add(deviceName);
+                deviceAdapter.add(usbManager.label(device));
             }
             if (btnConnect != null) {
-                btnConnect.setEnabled(true);
+                btnConnect.setEnabled(!usbManager.isConnected());
             }
         }
         deviceAdapter.notifyDataSetChanged();
+        if (spinnerHUDDevices != null && !availableDevices.isEmpty()) {
+            spinnerHUDDevices.setSelection(0);
+        }
+        updateUsbDetails(availableDevices.isEmpty() ? -1 : 0);
 
         Log.d(TAG, "Refreshed device list: " + availableDevices.size() + " devices found");
+    }
+
+    private void updateUsbDetails(int position) {
+        if (txtUsbDetails == null || usbManager == null) {
+            return;
+        }
+        if (availableDevices == null || position < 0 || position >= availableDevices.size()) {
+            txtUsbDetails.setText("Android reports no USB devices. Check the cable. Some phones, "
+                    + "OnePlus included, also need OTG switched on in Settings.");
+            return;
+        }
+        txtUsbDetails.setText(usbManager.describe(availableDevices.get(position)));
+    }
+
+    private void showLinkEvent(String message) {
+        if (txtDeviceInfo == null || usbManager == null) {
+            return;
+        }
+        HUDDevice device = usbManager.getCurrentDevice();
+        if (device != null && device.isConnected()) {
+            txtDeviceInfo.setText(device.getStatusString());
+        } else {
+            txtDeviceInfo.setText(message);
+        }
+    }
+
+    /** Copies the USB report to the clipboard so the user can paste it into an email. */
+    private void copyUsbReport() {
+        if (usbManager == null) {
+            return;
+        }
+        String report = usbManager.buildReport();
+        Log.i(TAG, report);
+        ClipboardManager clipboard = (ClipboardManager) mapView.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard == null) {
+            Toast.makeText(pluginContext, "Clipboard unavailable. The report is in the ATAK log.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        clipboard.setPrimaryClip(ClipData.newPlainText("OmniHUD USB report", report));
+        Toast.makeText(pluginContext, "USB report copied. Paste it into an email to the developer.", Toast.LENGTH_LONG).show();
     }
 
     private void connectToSelectedDevice() {
@@ -524,9 +575,11 @@ public class OmniHUDDropDownReceiver extends DropDownReceiver implements DropDow
 
     private void showHelpDialog() {
         Toast.makeText(pluginContext,
-            "1. Connect HUD via USB-C\n" +
-            "2. Select device and click Connect\n" +
-            "3. Enable streaming to send ATAK data to HUD",
+            "1. Connect the HUD by USB-C\n" +
+            "2. Pick it under Device Selection and tap Connect\n" +
+            "3. Allow USB access when Android asks\n" +
+            "4. Enable streaming to send ATAK data to the HUD\n" +
+            "If it will not connect, tap Copy USB Report and email it",
             Toast.LENGTH_LONG).show();
     }
 
